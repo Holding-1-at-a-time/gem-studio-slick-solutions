@@ -1,5 +1,6 @@
 
-import { internalMutation, query } from './_generated/server';
+
+import { internalMutation } from 'convex/server';
 import { ConvexError } from 'convex/values';
 
 /**
@@ -43,6 +44,7 @@ export const getAdminUser = async (ctx: any, clerkUserId: string) => {
  * This is an internal mutation that should be triggered by an HTTP action
  * listening to Clerk's user.created webhook.
  */
+// Fix: Use the 'internalMutation' factory function instead of the 'InternalMutation' type.
 export const store = internalMutation({
   handler: async (ctx, { clerkUserId }: { clerkUserId: string }) => {
     const existingUser = await getUserByClerkId(ctx, clerkUserId);

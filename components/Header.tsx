@@ -1,8 +1,33 @@
 
 import React from 'react';
-import { UserButton } from '@clerk/clerk-react';
+import { UserButton, useOrganization, useUser } from '@clerk/clerk-react';
 
-const Header: React.FC = () => {
+interface HeaderProps {
+    variant?: 'full' | 'dashboard';
+}
+
+const Header: React.FC<HeaderProps> = ({ variant = 'full' }) => {
+  const { organization } = useOrganization();
+  const { user } = useUser();
+  const isAdmin = user?.publicMetadata?.role === 'admin';
+
+  if (variant === 'dashboard') {
+     let title: string = "Dashboard";
+     if (isAdmin) {
+        title = "Admin Panel";
+     } else if (organization) {
+        title = organization.name;
+     }
+    return (
+        <header className="border-b border-border bg-card sticky top-0 z-10">
+            <div className="container mx-auto flex h-16 items-center justify-end px-4 md:px-8">
+                <UserButton afterSignOutUrl="/" />
+            </div>
+        </header>
+    );
+  }
+
+  // Full variant for public/auth pages
   return (
     <header className="border-b border-border">
       <div className="container mx-auto flex h-16 items-center justify-between px-4 md:px-8">
@@ -27,6 +52,7 @@ const Header: React.FC = () => {
             Slick Solutions
           </h1>
         </div>
+        {/* Only show UserButton if user might be loaded (e.g., on a page refresh when signed in) */}
         <UserButton afterSignOutUrl="/" />
       </div>
     </header>

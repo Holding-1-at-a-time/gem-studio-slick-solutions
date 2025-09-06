@@ -1,12 +1,17 @@
 
+
 import { httpRouter } from "convex/server";
-import { httpAction } from "./_generated/server";
+// Fix: Import 'httpAction' from 'convex/server' instead of 'HttpAction' from the generated file.
+import { httpAction } from "convex/server";
 import { internal } from "./_generated/api";
 import { Webhook } from "svix";
 import type { WebhookEvent } from "@clerk/clerk-sdk-node";
+import Stripe from 'stripe';
 
+// --- Clerk Webhook Handler ---
+// Fix: Use the 'httpAction' factory function.
 const handleClerkWebhook = httpAction(async (ctx, request) => {
-  const event = await validateRequest(request);
+  const event = await validateClerkRequest(request);
   if (!event) {
     return new Response("Invalid request", { status: 400 });
   }
@@ -25,6 +30,86 @@ const handleClerkWebhook = httpAction(async (ctx, request) => {
   return new Response(null, { status: 200 });
 });
 
+async function validateClerkRequest(req: Request): Promise<WebhookEvent | undefined> {
+    const webhookSecret = process.env.CLERK_WEBHOOK_SECRET;
+    if (!webhookSecret) {
+      throw new Error("CLERK_WEBHOOK_SECRET is not set");
+    }
+  
+    const payloadString = await req.text();
+    const svixHeaders = {
+      "svix-id": req.headers.get("svix-id")!,
+      "svix-timestamp": req.headers.get("svix-timestamp")!,
+      "svix-signature": req.headers.get("svix-signature")!,
+    };
+  
+    const wh = new Webhook(webhookSecret);
+    try {
+      const event = wh.verify(payloadString, svixHeaders) as WebhookEvent;
+      return event;
+    } catch (error) {
+      console.error("Error verifying Clerk webhook:", error);
+      return undefined;
+    }
+}
+
+
+// --- Stripe Webhook Handler ---
+// Fix: Use the 'httpAction' factory function.
+const handleStripeWebhook = httpAction(async (ctx, request) => {
+    const signature = request.headers.get("stripe-signature") as string;
+    const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
+    // Fix: Update Stripe API version to match the expected version from the type definitions.
+    const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, { apiVersion: '2025-08-27.basil' as any });
+
+    if (!webhookSecret) {
+        throw new Error("STRIPE_WEBHOOK_SECRET is not set");
+    }
+
+    let event;
+    try {
+        const payloadString = await request.text();
+        event = stripe.webhooks.constructEvent(payloadString, signature, webhookSecret);
+    } catch (err: any) {
+        console.error("Error verifying Stripe webhook:", err.message);
+        return new Response(`Webhook Error: ${err.message}`, { status: 400 });
+    }
+    
+    // Fix: Cast event data object to 'any' to avoid type conflicts with different event payloads.
+    const session = event.data.object as any;
+
+    switch (event.type) {
+        case "checkout.session.completed":
+            if (!session.metadata?.assessmentId) {
+                console.error("Webhook received without assessmentId in metadata");
+                return new Response("Missing metadata", { status: 400 });
+            }
+            await ctx.runMutation(internal.scheduling.fulfillStripeOrder, {
+                assessmentId: session.metadata.assessmentId as any,
+                stripePaymentId: session.payment_intent as string,
+                selectedTime: session.metadata.selectedTime,
+            });
+            break;
+        case "customer.subscription.updated":
+        case "customer.subscription.deleted":
+            // Fix: Cast event data object to 'any' to access properties that might not exist on the base 'Subscription' type.
+            const subscription = event.data.object as any;
+            await ctx.runMutation(internal.billing.updateSubscription, {
+                stripeSubscriptionId: subscription.id,
+                currentPeriodEnd: subscription.current_period_end * 1000,
+                plan: subscription.items.data[0].price.lookup_key!, 
+                status: subscription.status,
+            });
+            break;
+        default:
+            console.log(`Unhandled Stripe event type: ${event.type}`);
+    }
+
+    return new Response(null, { status: 200 });
+});
+
+
+// --- HTTP Router ---
 const http = httpRouter();
 
 http.route({
@@ -33,27 +118,10 @@ http.route({
   handler: handleClerkWebhook,
 });
 
-async function validateRequest(req: Request): Promise<WebhookEvent | undefined> {
-  const webhookSecret = process.env.CLERK_WEBHOOK_SECRET;
-  if (!webhookSecret) {
-    throw new Error("CLERK_WEBHOOK_SECRET is not set");
-  }
-
-  const payloadString = await req.text();
-  const svixHeaders = {
-    "svix-id": req.headers.get("svix-id")!,
-    "svix-timestamp": req.headers.get("svix-timestamp")!,
-    "svix-signature": req.headers.get("svix-signature")!,
-  };
-
-  const wh = new Webhook(webhookSecret);
-  try {
-    const event = wh.verify(payloadString, svixHeaders) as WebhookEvent;
-    return event;
-  } catch (error) {
-    console.error("Error verifying Clerk webhook:", error);
-    return undefined;
-  }
-}
+http.route({
+    path: "/stripe-webhook",
+    method: "POST",
+    handler: handleStripeWebhook,
+});
 
 export default http;

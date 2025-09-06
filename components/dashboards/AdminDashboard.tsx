@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { useMutation, useQuery } from 'convex/react';
+import { useAction, useQuery } from 'convex/react';
 import { api } from '../../convex/_generated/api';
 import Card from '../ui/Card';
 import Input from '../ui/Input';
@@ -9,7 +9,7 @@ import Spinner from '../ui/Spinner';
 
 const AdminDashboard: React.FC = () => {
   const [newTenantName, setNewTenantName] = useState('');
-  const createTenant = useMutation(api.tenants.createTenant);
+  const createTenant = useAction(api.tenants.createTenant);
   const allTenants = useQuery(api.tenants.getAllTenants);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
@@ -25,7 +25,7 @@ const AdminDashboard: React.FC = () => {
       setNewTenantName('');
     } catch (err) {
       console.error(err);
-      setError('Failed to create tenant. The Convex mutation likely needs an HTTP action to call Clerk\'s API, which is not implemented in this example.');
+      setError('Failed to create tenant. Check the Convex function logs for details.');
     } finally {
       setIsLoading(false);
     }
@@ -36,7 +36,7 @@ const AdminDashboard: React.FC = () => {
       <h1 className="text-3xl font-bold tracking-tight mb-6">Admin Dashboard</h1>
       <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
         <div className="md:col-span-1">
-          <Card>
+          <Card className="p-6">
             <h2 className="text-xl font-semibold mb-4">Create New Tenant</h2>
             <form onSubmit={handleCreateTenant} className="space-y-4">
               <Input
@@ -50,13 +50,13 @@ const AdminDashboard: React.FC = () => {
               </Button>
               {error && <p className="text-sm text-red-500 mt-2">{error}</p>}
                <p className="text-xs text-muted-foreground mt-2">
-                Note: This creates a record in Convex. A real implementation would require a Convex HTTP action to create an organization via the Clerk Backend API.
+                This will create an organization in Clerk and a corresponding tenant record in Convex.
               </p>
             </form>
           </Card>
         </div>
         <div className="md:col-span-2">
-          <Card>
+          <Card className="p-6">
             <h2 className="text-xl font-semibold mb-4">All Tenants</h2>
             {allTenants === undefined && <div className="flex justify-center p-8"><Spinner/></div>}
             {allTenants && allTenants.length === 0 && (

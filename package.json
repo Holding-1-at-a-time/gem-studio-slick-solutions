@@ -14,7 +14,11 @@
     "convex": "^1.26.2",
     "@clerk/clerk-react": "^5.46.1",
     "svix": "^1.76.1",
-    "@clerk/clerk-sdk-node": "^5.1.6"
+    "@clerk/clerk-sdk-node": "^5.1.6",
+    "@google/genai": "^0.23.0",
+    "@convex-dev/rate-limiter": "0.1.10",
+    "qrcode": "^1.5.3",
+    "stripe": "^16.2.0"
   },
   "devDependencies": {
     "@types/node": "^22.14.0",

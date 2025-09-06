@@ -1,5 +1,7 @@
 {
   "name": "Slick Solutions",
   "description": "A multi-tenant SaaS application for detailing businesses to manage their staff and clients. Features role-based access control (Admin, Detailer, Client) and tenant isolation using Clerk and Convex.",
-  "requestFramePermissions": []
+  "requestFramePermissions": [
+    "camera"
+  ]
 }

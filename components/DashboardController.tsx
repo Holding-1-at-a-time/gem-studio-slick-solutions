@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { useUser, useOrganization } from '@clerk/clerk-react';
 import AdminDashboard from './dashboards/AdminDashboard';
@@ -5,48 +6,55 @@ import DetailerDashboard from './dashboards/DetailerDashboard';
 import ClientDashboard from './dashboards/ClientDashboard';
 import NoOrganizationDashboard from './dashboards/NoOrganizationDashboard';
 import Spinner from './ui/Spinner';
+import DashboardLayout from './layout/DashboardLayout';
+import Header from './Header';
 
 const DashboardController: React.FC = () => {
   const { user, isLoaded: isUserLoaded } = useUser();
-  // Fix: Destructure `membership` directly from the `useOrganization` hook to get the current user's role.
   const { organization, membership, isLoaded: isOrgLoaded } = useOrganization();
 
   const isLoading = !isUserLoaded || !isOrgLoaded;
 
   if (isLoading) {
     return (
-      <div className="flex justify-center items-center h-64">
-        <Spinner />
+      <div className="flex justify-center items-center h-screen">
+        <Spinner size="lg" />
       </div>
     );
   }
 
   // Check for the global Admin role from Clerk's public metadata
   if (user?.publicMetadata?.role === 'admin') {
-    return <AdminDashboard />;
+    return <DashboardLayout><AdminDashboard /></DashboardLayout>;
   }
 
-  // If user is not part of an organization
+  // If user is not part of an organization, show a simple page.
   if (!organization) {
-    return <NoOrganizationDashboard />;
+    return (
+        <>
+            <Header />
+            <main className="container mx-auto p-4 md:p-8">
+                <NoOrganizationDashboard />
+            </main>
+        </>
+    );
   }
   
-  // Get the user's role within the current active organization
-  // Fix: The `organization` object from `useOrganization` does not have a `membership` property.
-  // The `membership` object should be destructured from the hook directly.
   const role = membership?.role;
 
   switch (role) {
     case 'org:detailer':
-      return <DetailerDashboard />;
+      return <DashboardLayout><DetailerDashboard /></DashboardLayout>;
     case 'org:client':
-      return <ClientDashboard />;
+      return <DashboardLayout><ClientDashboard /></DashboardLayout>;
     default:
       return (
-        <div className="text-center">
-            <h2 className="text-2xl font-bold">Unknown Role</h2>
-            <p className="text-muted-foreground">Your role in this organization is not recognized.</p>
-        </div>
+        <DashboardLayout>
+            <div className="text-center">
+                <h2 className="text-2xl font-bold">Unknown Role</h2>
+                <p className="text-muted-foreground">Your role in this organization is not recognized.</p>
+            </div>
+        </DashboardLayout>
       )
   }
 };

@@ -1,13 +1,12 @@
 
-
-import { action } from 'convex/server';
+// Fix: Import Convex function builders from './_generated/server'
+import { action } from './_generated/server';
 import { v } from 'convex/values';
 
 /**
  * SIMULATED ACTION: Sends an SMS reminder for an upcoming appointment.
  * This is triggered by a Convex scheduled job.
  */
-// Fix: Use the 'action' factory function instead of the 'Action' type.
 export const sendAppointmentReminder = action({
     args: {
         appointmentId: v.id("appointments"),

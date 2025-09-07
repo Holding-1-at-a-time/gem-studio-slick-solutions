@@ -1,12 +1,11 @@
 
-
-import { query } from 'convex/server';
+// Fix: Import Convex function builders from './_generated/server'
+import { query } from './_generated/server';
 import { v } from 'convex/values';
 
 /**
  * Public query to get available appointment slots for a tenant.
  */
-// Fix: Use the 'query' factory function instead of the 'Query' type.
 export const getAvailableSlots = query({
     args: { clerkOrgId: v.string() },
     handler: async (ctx, args) => {

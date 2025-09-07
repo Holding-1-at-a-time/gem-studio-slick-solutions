@@ -11,12 +11,12 @@ const LandingHeader = () => (
           <h1 className="text-xl font-bold tracking-tight text-foreground">Slick Solutions</h1>
         </div>
         <div className="flex items-center gap-4">
-             {/* Fix: Replaced afterSignInUrl with fallbackRedirectUrl for modal mode */}
-             <SignInButton mode="modal" fallbackRedirectUrl="/dashboard">
+            {/* Fix: Replaced `afterSignInUrl` with `redirectUrl` to fix prop type error. */}
+             <SignInButton mode="modal" redirectUrl="/dashboard">
                 <Button variant="secondary">Sign In</Button>
             </SignInButton>
-             {/* Fix: Replaced afterSignUpUrl with fallbackRedirectUrl for modal mode */}
-             <SignUpButton mode="modal" fallbackRedirectUrl="/dashboard">
+            {/* Fix: Replaced `afterSignUpUrl` with `redirectUrl` to fix prop type error. */}
+             <SignUpButton mode="modal" redirectUrl="/dashboard">
                 <Button>Get Started</Button>
             </SignUpButton>
         </div>
@@ -55,8 +55,8 @@ const LandingPage: React.FC = () => {
                         <p className="text-lg md:text-xl text-muted-foreground max-w-3xl mx-auto mb-8">
                             Stop juggling apps. From AI-powered client assessments to automated scheduling and analytics, Slick Solutions is the all-in-one platform designed to save you time and grow your revenue.
                         </p>
-                        {/* Fix: Replaced afterSignUpUrl with fallbackRedirectUrl for modal mode */}
-                        <SignUpButton mode="modal" fallbackRedirectUrl="/dashboard">
+                        {/* Fix: Replaced `afterSignUpUrl` with `redirectUrl` to fix prop type error. */}
+                        <SignUpButton mode="modal" redirectUrl="/dashboard">
                             <Button className="h-12 px-8 text-lg">Get Started for Free</Button>
                         </SignUpButton>
                     </div>
@@ -117,8 +117,8 @@ const LandingPage: React.FC = () => {
                          <p className="text-lg text-muted-foreground max-w-2xl mx-auto mb-8">
                            Join dozens of other detailing professionals who are saving time, booking more jobs, and building a better business with Slick Solutions.
                          </p>
-                        {/* Fix: Replaced afterSignUpUrl with fallbackRedirectUrl for modal mode */}
-                        <SignUpButton mode="modal" fallbackRedirectUrl="/dashboard">
+                        {/* Fix: Replaced `afterSignUpUrl` with `redirectUrl` to fix prop type error. */}
+                        <SignUpButton mode="modal" redirectUrl="/dashboard">
                             <Button className="h-12 px-8 text-lg">Start Your Free Trial</Button>
                         </SignUpButton>
                     </div>

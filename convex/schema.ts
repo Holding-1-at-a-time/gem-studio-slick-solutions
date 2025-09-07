@@ -97,7 +97,12 @@ export default defineSchema({
   // --- New Tables for AI & Scalability ---
   aiInsights: defineTable({ // For AI Business Optimizer
     clerkOrgId: v.string(),
-    insight: v.string(),
+    insight: v.object({
+      type: v.string(), // e.g., 'pricing', 'marketing'
+      title: v.string(),
+      description: v.string(),
+      actionDetails: v.optional(v.any()), // e.g., { serviceName: "...", newPrice: 123 }
+    }),
     generatedAt: v.number(),
   }).index('by_clerk_org_id', ['clerkOrgId']),
 

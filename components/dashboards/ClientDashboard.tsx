@@ -6,6 +6,32 @@ import { api } from '../../convex/_generated/api';
 import Card from '../ui/Card';
 import Spinner from '../ui/Spinner';
 
+const AppointmentsSkeleton = () => (
+    <div className="space-y-6">
+        <div>
+            <div className="h-6 bg-muted rounded w-1/4 mb-3 animate-pulse"></div>
+            <ul className="space-y-3">
+                {[...Array(2)].map((_, i) => (
+                    <li key={i} className="p-3 h-16 bg-secondary rounded-md border border-border animate-pulse">
+                        <div className="h-5 bg-muted rounded w-2/3 mb-2"></div>
+                        <div className="h-4 bg-muted rounded w-1/2"></div>
+                    </li>
+                ))}
+            </ul>
+        </div>
+        <div>
+            <div className="h-6 bg-muted rounded w-1/4 mb-3 animate-pulse"></div>
+            <ul className="space-y-3">
+                <li className="p-3 h-16 bg-secondary/50 rounded-md border border-border/50 opacity-70 animate-pulse">
+                    <div className="h-5 bg-muted/50 rounded w-2/3 mb-2"></div>
+                    <div className="h-4 bg-muted/50 rounded w-1/2"></div>
+                </li>
+            </ul>
+        </div>
+    </div>
+);
+
+
 const ClientDashboard: React.FC = () => {
   const { user } = useUser();
   const appointments = useQuery(api.scheduling.getAppointmentsForClient);
@@ -24,11 +50,7 @@ const ClientDashboard: React.FC = () => {
       </h1>
       <Card className="p-6">
         <h2 className="text-xl font-semibold mb-4">Your Appointments</h2>
-        {appointments === undefined && (
-          <div className="flex justify-center items-center h-40">
-            <Spinner />
-          </div>
-        )}
+        {appointments === undefined && <AppointmentsSkeleton />}
         {appointments && appointments.length === 0 && (
           <p className="text-muted-foreground">
             You don't have any scheduled appointments yet.

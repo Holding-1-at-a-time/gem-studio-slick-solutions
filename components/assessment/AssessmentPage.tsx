@@ -1,4 +1,6 @@
+
 import React, { useState, useEffect, useRef } from 'react';
+import { useParams, useSearchParams } from 'react-router-dom';
 import { useQuery, useMutation, useAction } from 'convex/react';
 import { api } from '../../convex/_generated/api';
 import type { Id } from '../../convex/_generated/dataModel';
@@ -26,8 +28,8 @@ const StepIndicator: React.FC<{ currentStep: number; totalSteps: number; }> = ({
 );
 
 const BookingConfirmation: React.FC = () => {
-    const urlParams = new URLSearchParams(window.location.search);
-    const assessmentId = urlParams.get('assessmentId') as Id<"assessments"> | null;
+    const [searchParams] = useSearchParams();
+    const assessmentId = searchParams.get('assessmentId') as Id<"assessments"> | null;
     const appointment = useQuery(api.scheduling.getAppointmentByAssessmentId, assessmentId ? { assessmentId } : 'skip');
     
     return (
@@ -42,7 +44,7 @@ const BookingConfirmation: React.FC = () => {
             {appointment === undefined && <div className="h-10 flex justify-center items-center"><Spinner /></div>}
             {appointment && (
                 <div className="pt-4">
-                    <a href={`/review?appointmentId=${appointment._id}`} className="w-full">
+                    <a href={`/review/${appointment._id}`} className="w-full">
                         <Button className="w-full max-w-xs mx-auto">Leave a Review</Button>
                     </a>
                 </div>
@@ -125,9 +127,9 @@ const AssessmentPage: React.FC = () => {
     const [isProcessingPayment, setIsProcessingPayment] = useState(false);
     const [isChatOpen, setIsChatOpen] = useState(false);
 
-    const urlParams = new URLSearchParams(window.location.search);
-    const clerkOrgId = urlParams.get('tenantId');
-    const stripeSessionId = urlParams.get('session_id');
+    const { tenantId: clerkOrgId } = useParams<{ tenantId: string }>();
+    const [searchParams] = useSearchParams();
+    const stripeSessionId = searchParams.get('session_id');
 
     const tenant = useQuery(api.tenants.getTenantByOrgId, clerkOrgId ? { clerkOrgId } : 'skip');
     const availableSlots = useQuery(api.availability.getAvailableSlots, clerkOrgId ? { clerkOrgId } : 'skip');

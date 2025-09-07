@@ -1,13 +1,12 @@
 
-
-import { query, action, internalAction, internalQuery, internalMutation } from 'convex/server';
+// Fix: Import Convex function builders from './_generated/server'
+import { query, action, internalAction, internalQuery, internalMutation } from './_generated/server';
 import { v } from 'convex/values';
 import { ConvexError } from 'convex/values';
 import { internal } from './_generated/api';
 
 // --- PUBLIC QUERIES (read from cache) ---
 
-// Fix: Use the 'query' factory function instead of the 'Query' type.
 export const getDashboardMetrics = query({
     args: { clerkOrgId: v.string() },
     handler: async (ctx, args) => {
@@ -18,7 +17,6 @@ export const getDashboardMetrics = query({
     },
 });
 
-// Fix: Use the 'query' factory function instead of the 'Query' type.
 export const getRevenueForecast = query({
     args: { clerkOrgId: v.string() },
     handler: async (ctx, args) => {
@@ -31,7 +29,6 @@ export const getRevenueForecast = query({
 
 // --- PUBLIC ACTION (for on-demand tasks) ---
 
-// Fix: Use the 'action' factory function instead of the 'Action' type.
 export const generateClientReport = action({
     args: { clerkOrgId: v.string() },
     handler: async (ctx, args) => {
@@ -58,13 +55,13 @@ export const generateClientReport = action({
 
 // --- INTERNAL ACTIONS & QUERIES (for background jobs) ---
 
-// Fix: Use the 'internalAction' factory function instead of the 'InternalAction' type.
 export const calculateAndCacheMetrics = internalAction({
     args: { clerkOrgId: v.string() },
     handler: async (ctx, { clerkOrgId }) => {
         // 1. Perform heavy calculations
         const appointments = await ctx.runQuery(internal.analytics.getAppointmentsForReport, { clerkOrgId });
         const reviews = await ctx.runQuery(internal.analytics.getReviewsForReport, { clerkOrgId });
+        const pricingModel = await ctx.runQuery(internal.pricing.getPricingModel, { clerkOrgId });
 
         const totalRevenue = appointments.reduce((sum, appt) => sum + (appt.price || 0), 0);
         const totalAppointments = appointments.length;
@@ -100,37 +97,37 @@ export const calculateAndCacheMetrics = internalAction({
         }
 
         // 4. Trigger AI insight generation based on new data
-        await ctx.scheduler.runAfter(0, internal.aiAgents.generateBusinessInsights, { clerkOrgId });
+        if (pricingModel) {
+            await ctx.scheduler.runAfter(0, internal.aiAgents.generateBusinessInsights, { 
+                clerkOrgId,
+                pricingModel,
+            });
+        }
     }
 });
 
 // --- Internal helpers for the worker ---
 
-// Fix: Use the 'internalQuery' factory function instead of the 'InternalQuery' type.
 export const getAppointmentsForReport = internalQuery({
     args: { clerkOrgId: v.string() },
     handler: async (ctx, args) => await ctx.db.query('appointments').withIndex('by_clerk_org_id', q => q.eq('clerkOrgId', args.clerkOrgId)).collect(),
 });
 
-// Fix: Use the 'internalQuery' factory function instead of the 'InternalQuery' type.
 export const getReviewsForReport = internalQuery({
     args: { clerkOrgId: v.string() },
     handler: async (ctx, args) => await ctx.db.query('reviews').withIndex('by_clerk_org_id', q => q.eq('clerkOrgId', args.clerkOrgId)).collect(),
 });
 
-// Fix: Use the 'internalQuery' factory function instead of the 'InternalQuery' type.
 export const getCache = internalQuery({
     args: { clerkOrgId: v.string() },
     handler: async (ctx, args) => await ctx.db.query('analyticsCache').withIndex('by_clerk_org_id', q => q.eq('clerkOrgId', args.clerkOrgId)).unique(),
 });
 
-// Fix: Use the 'internalMutation' factory function instead of the 'InternalMutation' type.
 export const createCache = internalMutation({
     args: { clerkOrgId: v.string(), metrics: v.any() },
     handler: async (ctx, args) => await ctx.db.insert('analyticsCache', { ...args, updatedAt: Date.now() }),
 });
 
-// Fix: Use the 'internalMutation' factory function instead of the 'InternalMutation' type.
 export const updateCache = internalMutation({
     args: { id: v.id('analyticsCache'), metrics: v.any() },
     handler: async (ctx, args) => await ctx.db.patch(args.id, { metrics: args.metrics, updatedAt: Date.now() }),

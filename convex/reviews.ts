@@ -1,10 +1,9 @@
 
-
-import { mutation, query } from 'convex/server';
+// Fix: Import Convex function builders from './_generated/server'
+import { mutation, query } from './_generated/server';
 import { v } from 'convex/values';
 import { ConvexError } from 'convex/values';
 
-// Fix: Use the 'mutation' factory function instead of the 'Mutation' type.
 export const submitReview = mutation({
     args: {
         appointmentId: v.id('appointments'),
@@ -43,7 +42,6 @@ export const submitReview = mutation({
 });
 
 
-// Fix: Use the 'query' factory function instead of the 'Query' type.
 export const getReviewsForTenant = query({
     args: { clerkOrgId: v.string() },
     handler: async (ctx, args) => {

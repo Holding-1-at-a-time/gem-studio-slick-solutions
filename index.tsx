@@ -1,6 +1,7 @@
+
 import React from 'react';
 import ReactDOM from 'react-dom/client';
-// Fix: Import `useAuth` from clerk-react to satisfy the requirements of ConvexProviderWithClerk.
+import { BrowserRouter } from 'react-router-dom';
 import { ClerkProvider, useAuth } from '@clerk/clerk-react';
 import { ConvexProviderWithClerk } from 'convex/react-clerk';
 import { ConvexReactClient } from 'convex/react';
@@ -23,11 +24,12 @@ if (!rootElement) {
 const root = ReactDOM.createRoot(rootElement);
 root.render(
   <React.StrictMode>
-    <ClerkProvider publishableKey={clerkPubKey}>
-      {/* Fix: Pass the `useAuth` hook as a prop to `ConvexProviderWithClerk`. It is a required prop. */}
-      <ConvexProviderWithClerk client={convex} useAuth={useAuth}>
-        <App />
-      </ConvexProviderWithClerk>
-    </ClerkProvider>
+    <BrowserRouter>
+      <ClerkProvider publishableKey={clerkPubKey}>
+        <ConvexProviderWithClerk client={convex} useAuth={useAuth}>
+          <App />
+        </ConvexProviderWithClerk>
+      </ClerkProvider>
+    </BrowserRouter>
   </React.StrictMode>
 );

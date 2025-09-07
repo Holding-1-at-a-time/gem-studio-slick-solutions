@@ -1,8 +1,8 @@
 
-
 import { cronJobs } from 'convex/server';
 import { internal } from './_generated/api';
-import { internalAction } from 'convex/server';
+// Fix: Import Convex function builders from './_generated/server'
+import { internalAction } from './_generated/server';
 
 const crons = cronJobs();
 
@@ -18,7 +18,6 @@ crons.interval(
  * An internal action that kicks off the analytics calculation for all tenants.
  * This is the entry point for the cron job.
  */
-// Fix: Use the 'internalAction' factory function instead of the 'InternalAction' type.
 export const updateAllAnalytics = internalAction({
   handler: async (ctx) => {
     // 1. Get all tenants from an internal query that doesn't require auth.

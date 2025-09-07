@@ -18,7 +18,8 @@
     "@google/genai": "^0.23.0",
     "@convex-dev/rate-limiter": "0.1.10",
     "qrcode": "^1.5.3",
-    "stripe": "^16.2.0"
+    "stripe": "^16.2.0",
+    "react-router-dom": "^6.25.1"
   },
   "devDependencies": {
     "@types/node": "^22.14.0",

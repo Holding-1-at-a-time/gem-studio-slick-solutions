@@ -1,5 +1,6 @@
 
 import React, { useState } from 'react';
+import { useParams } from 'react-router-dom';
 import { useMutation } from 'convex/react';
 import { api } from '../../convex/_generated/api';
 import type { Id } from '../../convex/_generated/dataModel';
@@ -52,8 +53,7 @@ const ReviewPage: React.FC = () => {
     const submitReview = useMutation(api.reviews.submitReview);
     const [isLoading, setIsLoading] = useState(false);
 
-    const urlParams = new URLSearchParams(window.location.search);
-    const appointmentId = urlParams.get('appointmentId') as Id<"appointments"> | null;
+    const { appointmentId } = useParams<{ appointmentId: Id<"appointments"> }>();
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();

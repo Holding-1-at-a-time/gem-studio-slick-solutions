@@ -1,14 +1,17 @@
 
-
-import { query, action, internalMutation } from 'convex/server';
+// Fix: Import Convex function builders from './_generated/server'
+import { query, action, internalMutation } from './_generated/server';
 import { v } from 'convex/values';
 import Stripe from 'stripe';
 
-// Fix: Update Stripe API version to match the expected version from the type definitions.
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, { apiVersion: '2025-08-27.basil' as any });
+const stripeSecretKey = process.env.STRIPE_SECRET_KEY;
+if (!stripeSecretKey) {
+  throw new Error("STRIPE_SECRET_KEY environment variable not set.");
+}
+const stripe = new Stripe(stripeSecretKey);
+
 
 // Get the subscription status for the current user's organization
-// Fix: Use the 'query' factory function instead of the 'Query' type.
 export const getSubscription = query({
     args: { clerkOrgId: v.string() },
     handler: async (ctx, args) => {
@@ -28,7 +31,6 @@ export const getSubscription = query({
 });
 
 // Action to create a Stripe Billing Portal session
-// Fix: Use the 'action' factory function instead of the 'Action' type.
 export const createStripePortalSession = action({
     handler: async (ctx) => {
         const identity = await ctx.auth.getUserIdentity();
@@ -59,7 +61,6 @@ export const createStripePortalSession = action({
 
 
 // Internal mutation to update subscription status from a Stripe webhook
-// Fix: Use the 'internalMutation' factory function instead of the 'InternalMutation' type.
 export const updateSubscription = internalMutation({
     args: {
         stripeSubscriptionId: v.string(),

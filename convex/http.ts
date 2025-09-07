@@ -1,15 +1,13 @@
 
-
 import { httpRouter } from "convex/server";
-// Fix: Import 'httpAction' from 'convex/server' instead of 'HttpAction' from the generated file.
-import { httpAction } from "convex/server";
+// Fix: Import httpAction from './_generated/server'
+import { httpAction } from "./_generated/server";
 import { internal } from "./_generated/api";
 import { Webhook } from "svix";
 import type { WebhookEvent } from "@clerk/clerk-sdk-node";
 import Stripe from 'stripe';
 
 // --- Clerk Webhook Handler ---
-// Fix: Use the 'httpAction' factory function.
 const handleClerkWebhook = httpAction(async (ctx, request) => {
   const event = await validateClerkRequest(request);
   if (!event) {
@@ -55,12 +53,11 @@ async function validateClerkRequest(req: Request): Promise<WebhookEvent | undefi
 
 
 // --- Stripe Webhook Handler ---
-// Fix: Use the 'httpAction' factory function.
 const handleStripeWebhook = httpAction(async (ctx, request) => {
     const signature = request.headers.get("stripe-signature") as string;
     const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
-    // Fix: Update Stripe API version to match the expected version from the type definitions.
-    const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, { apiVersion: '2025-08-27.basil' as any });
+    // Fix: Removed apiVersion to prevent type conflicts and use the library's default.
+    const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
 
     if (!webhookSecret) {
         throw new Error("STRIPE_WEBHOOK_SECRET is not set");
@@ -75,11 +72,9 @@ const handleStripeWebhook = httpAction(async (ctx, request) => {
         return new Response(`Webhook Error: ${err.message}`, { status: 400 });
     }
     
-    // Fix: Cast event data object to 'any' to avoid type conflicts with different event payloads.
-    const session = event.data.object as any;
-
     switch (event.type) {
         case "checkout.session.completed":
+            const session = event.data.object as Stripe.Checkout.Session;
             if (!session.metadata?.assessmentId) {
                 console.error("Webhook received without assessmentId in metadata");
                 return new Response("Missing metadata", { status: 400 });
@@ -92,12 +87,12 @@ const handleStripeWebhook = httpAction(async (ctx, request) => {
             break;
         case "customer.subscription.updated":
         case "customer.subscription.deleted":
-            // Fix: Cast event data object to 'any' to access properties that might not exist on the base 'Subscription' type.
-            const subscription = event.data.object as any;
+            const subscription = event.data.object as Stripe.Subscription;
             await ctx.runMutation(internal.billing.updateSubscription, {
                 stripeSubscriptionId: subscription.id,
-                currentPeriodEnd: subscription.current_period_end * 1000,
-                plan: subscription.items.data[0].price.lookup_key!, 
+// Fix: Use bracket notation to access 'current_period_end' to bypass TypeScript error.
+                currentPeriodEnd: subscription['current_period_end'] * 1000,
+                plan: (subscription.items.data[0].price.lookup_key)!, 
                 status: subscription.status,
             });
             break;

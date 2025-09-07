@@ -1,6 +1,6 @@
 
-
-import { mutation, internalAction, internalQuery, query, internalMutation } from 'convex/server';
+// Fix: Import Convex function builders from './_generated/server'
+import { mutation, internalAction, internalQuery, query, internalMutation } from './_generated/server';
 import { v } from 'convex/values';
 import { api, internal } from './_generated/api';
 import { GoogleGenAI, Type } from "@google/genai";
@@ -24,7 +24,6 @@ const estimateGenerationLimiter = new RateLimiter("estimateGeneration", [{ rate:
 
 // --- PUBLIC MUTATIONS & ACTIONS ---
 
-// Fix: Use the 'mutation' factory function instead of the 'Mutation' type.
 export const submitAssessment = mutation({
     args: {
         clerkOrgId: v.string(), clientName: v.string(), clientEmail: v.string(),
@@ -34,40 +33,34 @@ export const submitAssessment = mutation({
     handler: async (ctx, args) => {
         const assessmentId = await ctx.db.insert("assessments", { ...args });
         await ctx.db.insert("estimateJobs", { assessmentId, status: "pending" });
-        await ctx.scheduler.runAfter(0, internal.assessments.processEstimateJob, { assessmentData: args });
+        await ctx.scheduler.runAfter(0, internal.assessments.processEstimateJob, { assessmentId, clerkOrgId: args.clerkOrgId });
         return assessmentId;
     }
 });
 
 // --- WORKER (INTERNAL ACTION) ---
 
-// Fix: Use the 'internalAction' factory function instead of the 'InternalAction' type.
 export const processEstimateJob = internalAction({
     args: {
-        assessmentData: v.object({
-            clerkOrgId: v.string(), vehicleYear: v.string(), vehicleMake: v.string(),
-            vehicleModel: v.string(), conditionNotes: v.string(),
-        }),
+        assessmentId: v.id("assessments"),
+        clerkOrgId: v.string(),
     },
-    handler: async (ctx, { assessmentData }) => {
-        const { clerkOrgId } = assessmentData;
-        const assessment = await ctx.runQuery(internal.assessments.getAssessmentByClerkOrgId, { clerkOrgId });
-        if (!assessment) throw new Error("Could not find matching assessment to process job.");
-
-        const job = await ctx.runQuery(internal.assessments.getJobByAssessmentId, { assessmentId: assessment._id });
+    handler: async (ctx, { assessmentId, clerkOrgId }) => {
+        const job = await ctx.runQuery(internal.assessments.getJobByAssessmentId, { assessmentId });
         if (!job) throw new Error("Job not found for assessment.");
+        const assessment = await ctx.runQuery(api.assessments.getAssessmentById, { id: assessmentId });
+        if(!assessment) throw new Error("Could not find matching assessment to process job.");
 
         try {
-            // Fix: Pass context to the rate limiter and check for the `ok` property, not `success`.
             const { ok } = await estimateGenerationLimiter.check(ctx, clerkOrgId);
             if (!ok) {
-                console.warn(`Rate limit exceeded for organization: ${clerkOrgId}. Job rescheduled.`);
-                await ctx.scheduler.runAfter(60 * 1000, internal.assessments.processEstimateJob, { assessmentData });
+                console.warn(`Rate limit exceeded for org ${clerkOrgId}. Job rescheduled.`);
+                await ctx.scheduler.runAfter(60 * 1000, internal.assessments.processEstimateJob, { assessmentId, clerkOrgId });
                 return;
             }
 
             await ctx.runMutation(internal.assessments.updateJobStatus, { jobId: job._id, status: "in_progress" });
-            const estimate = await generateEstimateWithAI(ctx, assessmentData);
+            const estimate = await generateEstimateWithAI(ctx, assessment);
 
             await ctx.runMutation(internal.assessments.saveEstimate, {
                 assessmentId: assessment._id, items: estimate.items, total: estimate.total,
@@ -83,8 +76,13 @@ export const processEstimateJob = internalAction({
 });
 
 async function generateEstimateWithAI(ctx: any, args: { clerkOrgId: string, vehicleYear: string, vehicleMake: string, vehicleModel: string, conditionNotes: string }) {
-    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY! });
-    const pricingModel = await ctx.runQuery(internal.assessments.getPricingModel, { clerkOrgId: args.clerkOrgId });
+    const apiKey = process.env.API_KEY;
+    if (!apiKey) {
+        throw new Error("Gemini API_KEY environment variable not set.");
+    }
+    const ai = new GoogleGenAI({ apiKey });
+
+    const pricingModel = await ctx.runQuery(internal.pricing.getPricingModel, { clerkOrgId: args.clerkOrgId });
     if (!pricingModel) throw new Error(`Pricing model not found for tenant ${args.clerkOrgId}`);
     
     const basePricesText = pricingModel.services.map(s => `- ${s.name} (${s.description}): $${s.basePrice}`).join('\n');
@@ -116,20 +114,14 @@ async function generateEstimateWithAI(ctx: any, args: { clerkOrgId: string, vehi
         },
     });
 
-    const response = await retry(generate);
+    // Fix: Explicitly pass all arguments to the retry function to avoid a potential TypeScript inference issue.
+    const response = await retry(generate, 3, 1000);
     return JSON.parse(response.text);
 }
 
 
 // --- INTERNAL HELPERS (QUERIES & MUTATIONS) ---
 
-// Fix: Use the 'internalQuery' factory function instead of the 'InternalQuery' type.
-export const getPricingModel = internalQuery({
-    args: { clerkOrgId: v.string() },
-    handler: async (ctx, args) => await ctx.db.query("pricingModels").withIndex("by_clerk_org_id", (q) => q.eq("clerkOrgId", args.clerkOrgId)).unique(),
-});
-
-// Fix: Use the 'internalMutation' factory function instead of the 'InternalMutation' type.
 export const saveEstimate = internalMutation({
     args: {
         assessmentId: v.id("assessments"), items: v.array(v.object({ description: v.string(), price: v.number() })), total: v.number(),
@@ -138,36 +130,23 @@ export const saveEstimate = internalMutation({
     handler: async (ctx, args) => { await ctx.db.insert("estimates", { ...args }); },
 });
 
-// Fix: Use the 'internalMutation' factory function instead of the 'InternalMutation' type.
 export const updateJobStatus = internalMutation({
     args: { jobId: v.id("estimateJobs"), status: v.union(v.literal('pending'), v.literal('in_progress'), v.literal('completed'), v.literal('failed')) },
     handler: async (ctx, { jobId, status }) => { await ctx.db.patch(jobId, { status }); },
 });
 
-// Fix: Use the 'internalQuery' factory function instead of the 'InternalQuery' type.
 export const getJobByAssessmentId = internalQuery({
     args: { assessmentId: v.id("assessments") },
     handler: async (ctx, { assessmentId }) => await ctx.db.query("estimateJobs").withIndex("by_assessment_id", q => q.eq("assessmentId", assessmentId)).unique(),
 });
 
-// Fix: Use the 'internalQuery' factory function instead of the 'InternalQuery' type.
-export const getAssessmentByClerkOrgId = internalQuery({
-    args: { clerkOrgId: v.string() },
-    handler: async (ctx, { clerkOrgId }) => {
-        // This is simplified; a real app would need a more robust way to link a job to the right assessment.
-        return await ctx.db.query("assessments").filter(q => q.eq(q.field("clerkOrgId"), clerkOrgId)).order("desc").first();
-    },
-});
-
 // --- PUBLIC QUERIES ---
 
-// Fix: Use the 'query' factory function instead of the 'Query' type.
 export const getEstimate = query({
     args: { assessmentId: v.id("assessments") },
     handler: async (ctx, args) => await ctx.db.query("estimates").withIndex("by_assessment_id", (q) => q.eq("assessmentId", args.assessmentId)).unique(),
 });
 
-// Fix: Use the 'query' factory function instead of the 'Query' type.
 export const getAssessmentById = query({
     args: { id: v.id("assessments") },
     handler: async (ctx, args) => await ctx.db.get(args.id),

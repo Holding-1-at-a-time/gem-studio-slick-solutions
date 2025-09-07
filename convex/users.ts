@@ -1,7 +1,8 @@
 
-
-import { internalMutation } from 'convex/server';
-import { ConvexError } from 'convex/values';
+// Fix: Import Convex function builders from './_generated/server'
+import { internalMutation } from './_generated/server';
+// Fix: Import 'v' for schema validation
+import { ConvexError, v } from 'convex/values';
 
 /**
  * Retrieves a user from the database by their Clerk user ID.
@@ -44,9 +45,9 @@ export const getAdminUser = async (ctx: any, clerkUserId: string) => {
  * This is an internal mutation that should be triggered by an HTTP action
  * listening to Clerk's user.created webhook.
  */
-// Fix: Use the 'internalMutation' factory function instead of the 'InternalMutation' type.
 export const store = internalMutation({
-  handler: async (ctx, { clerkUserId }: { clerkUserId: string }) => {
+  args: { clerkUserId: v.string() },
+  handler: async (ctx, { clerkUserId }) => {
     const existingUser = await getUserByClerkId(ctx, clerkUserId);
     if (existingUser) {
       console.log(`User ${clerkUserId} already exists.`);

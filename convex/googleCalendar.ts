@@ -1,6 +1,6 @@
 
-
-import { action, internalMutation } from 'convex/server';
+// Fix: Import Convex function builders from './_generated/server'
+import { action, internalMutation } from './_generated/server';
 import { v } from 'convex/values';
 import { internal } from './_generated/api';
 
@@ -8,7 +8,6 @@ import { internal } from './_generated/api';
  * SIMULATED ACTION: Creates a Google Calendar event for a new appointment.
  * In a real application, this would use the Google Calendar API.
  */
-// Fix: Use the 'action' factory function instead of the 'Action' type.
 export const createEvent = action({
     args: {
         appointmentId: v.id("appointments"),
@@ -43,7 +42,6 @@ export const createEvent = action({
 });
 
 // Internal mutation to store the event ID back in the appointment record
-// Fix: Use the 'internalMutation' factory function instead of the 'InternalMutation' type.
 export const storeEventId = internalMutation({
     args: {
         appointmentId: v.id("appointments"),

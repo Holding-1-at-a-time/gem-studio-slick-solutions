@@ -1,6 +1,6 @@
 
-
-import { query, action, internalMutation, internalQuery } from 'convex/server';
+// Fix: Import Convex function builders from './_generated/server'
+import { query, action, internalMutation, internalQuery, mutation } from './_generated/server';
 import { v } from 'convex/values';
 import { ConvexError } from 'convex/values';
 import { getAdminUser } from './users';
@@ -20,7 +20,6 @@ const checkAdmin = async (ctx: any) => {
 }
 
 // Action for an Admin to create a new tenant organization.
-// Fix: Use the 'action' factory function instead of the 'Action' type.
 export const createTenant = action({
   args: { name: v.string() },
   handler: async (ctx, args) => {
@@ -60,7 +59,6 @@ export const createTenant = action({
   },
 });
 
-// Fix: Use the 'internalMutation' factory function instead of the 'InternalMutation' type.
 export const storeTenant = internalMutation({
     args: { name: v.string(), clerkOrgId: v.string() },
     handler: async (ctx, args) => {
@@ -106,7 +104,6 @@ export const storeTenant = internalMutation({
 })
 
 // Query for an Admin to retrieve all tenants.
-// Fix: Use the 'query' factory function instead of the 'Query' type.
 export const getAllTenants = query({
   handler: async (ctx) => {
     await checkAdmin(ctx);
@@ -115,7 +112,6 @@ export const getAllTenants = query({
 });
 
 // Public query to get tenant info by org ID for the assessment page
-// Fix: Use the 'query' factory function instead of the 'Query' type.
 export const getTenantByOrgId = query({
     args: { clerkOrgId: v.string() },
     handler: async (ctx, args) => {
@@ -132,9 +128,22 @@ export const getTenantByOrgId = query({
     }
 });
 
+export const getMyTenant = query({
+    handler: async (ctx) => {
+      const identity = await ctx.auth.getUserIdentity();
+      if (!identity || !identity.orgId) {
+        return null;
+      }
+  
+      return await ctx.db
+        .query("tenants")
+        .withIndex("by_clerk_org_id", (q) => q.eq("clerkOrgId", identity.orgId!))
+        .unique();
+    },
+  });
+
 // Mutation to update the tenant's theme color
-// Fix: Use the 'internalMutation' factory function instead of the 'InternalMutation' type.
-export const updateTheme = internalMutation({
+export const updateTheme = mutation({
     args: { themeColor: v.string() },
     handler: async (ctx, args) => {
         const identity = await ctx.auth.getUserIdentity();
@@ -157,7 +166,6 @@ export const updateTheme = internalMutation({
 });
 
 // Internal query for scheduled jobs to get all tenants without auth checks.
-// Fix: Use the 'internalQuery' factory function instead of the 'InternalQuery' type.
 export const listAllTenantsForInternalUse = internalQuery({
     handler: async (ctx) => {
         return await ctx.db.query("tenants").collect();

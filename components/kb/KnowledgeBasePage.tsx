@@ -1,5 +1,6 @@
 
 import React from 'react';
+import { Link } from 'react-router-dom';
 import Card from '../ui/Card';
 
 interface FAQItemProps {
@@ -21,16 +22,16 @@ const KnowledgeBasePage: React.FC = () => {
     return (
         <div className="min-h-screen bg-background text-foreground">
             <header className="border-b border-border">
-                <div className="container mx-auto flex h-16 items-center justify-between px-4 md:px-8">
+                <div className="container mx-auto flex h-16 items-center justify-between px-4 md:p-8">
                      <div className="flex items-center gap-2">
                         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-primary"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
                         <h1 className="text-xl font-bold tracking-tight text-foreground">
                            Knowledge Base
                         </h1>
                     </div>
-                    <a href="/" className="text-sm font-medium text-primary hover:underline">
+                    <Link to="/dashboard" className="text-sm font-medium text-primary hover:underline">
                         Back to App
-                    </a>
+                    </Link>
                 </div>
             </header>
             <main className="container mx-auto p-4 md:p-8">

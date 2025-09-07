@@ -9,6 +9,32 @@ import QRCode from 'qrcode';
 
 const THEME_COLORS = ['#ffffff', '#3b82f6', '#ef4444', '#22c55e', '#eab308', '#8b5cf6'];
 
+const DashboardSkeleton = () => (
+    <div>
+        <div className="h-8 bg-muted rounded w-3/4 mb-2 animate-pulse"></div>
+        <div className="h-5 bg-muted rounded w-1/2 mb-8 animate-pulse"></div>
+        <div className="flex flex-col md:flex-row gap-4 mb-8">
+            <div className="h-24 bg-card rounded-lg flex-1 animate-pulse"></div>
+            <div className="h-24 bg-card rounded-lg flex-1 animate-pulse"></div>
+            <div className="h-24 bg-card rounded-lg flex-1 animate-pulse"></div>
+        </div>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <div className="lg:col-span-2 space-y-8">
+                <div className="h-28 bg-card rounded-lg animate-pulse"></div>
+                <div className="h-60 bg-card rounded-lg animate-pulse"></div>
+                <div className="h-60 bg-card rounded-lg animate-pulse"></div>
+            </div>
+            <div className="space-y-8">
+                <div className="h-64 bg-card rounded-lg animate-pulse"></div>
+                <div className="h-28 bg-card rounded-lg animate-pulse"></div>
+                <div className="h-10 bg-card rounded-lg animate-pulse"></div>
+                <div className="h-10 bg-card rounded-lg animate-pulse"></div>
+            </div>
+        </div>
+    </div>
+);
+
+
 const Analytics: React.FC<{ clerkOrgId: string }> = ({ clerkOrgId }) => {
     const metrics = useQuery(api.analytics.getDashboardMetrics, { clerkOrgId });
     
@@ -24,8 +50,7 @@ const Analytics: React.FC<{ clerkOrgId: string }> = ({ clerkOrgId }) => {
         </Card>
     );
 
-    if (metrics === undefined) return <div className="flex justify-center items-center h-24"><Spinner /></div>
-    if (metrics === null) return <p className="text-muted-foreground text-sm text-center col-span-3">Analytics are being generated. Check back in a few minutes.</p>
+    if (metrics === undefined || metrics === null) return null;
 
     return (
         <div className="flex flex-col md:flex-row gap-4 mb-8">
@@ -39,8 +64,7 @@ const Analytics: React.FC<{ clerkOrgId: string }> = ({ clerkOrgId }) => {
 const RevenueForecast: React.FC<{ clerkOrgId: string }> = ({ clerkOrgId }) => {
     const forecast = useQuery(api.analytics.getRevenueForecast, { clerkOrgId });
 
-    if (forecast === undefined) return <div className="flex justify-center p-4"><Spinner /></div>;
-    if (forecast === null) return null; // Handled by parent
+    if (forecast === undefined || forecast === null) return null;
 
     const maxRevenue = Math.max(...forecast.map(f => f.revenue), 1);
 
@@ -61,13 +85,46 @@ const RevenueForecast: React.FC<{ clerkOrgId: string }> = ({ clerkOrgId }) => {
 };
 
 const AIInsights: React.FC<{ clerkOrgId: string }> = ({ clerkOrgId }) => {
-    const insight = useQuery(api.aiAgents.getLatestInsight, { clerkOrgId });
+    const insightData = useQuery(api.aiAgents.getLatestInsight, { clerkOrgId });
+    const updatePrice = useMutation(api.pricing.updateServicePrice);
+    const [isApplying, setIsApplying] = useState(false);
+
+    const handleApplySuggestion = async (details: any) => {
+        if (details?.serviceName && details?.newPrice) {
+            setIsApplying(true);
+            try {
+                await updatePrice({ serviceName: details.serviceName, newPrice: details.newPrice });
+            } catch (e) {
+                console.error("Failed to apply suggestion", e);
+            } finally {
+                setIsApplying(false);
+            }
+        }
+    };
+
+    if (insightData === undefined) return null;
+    const insight = insightData?.insight; // The insight object is nested
+
     return (
         <Card className="p-6 bg-gradient-to-tr from-secondary to-secondary/50">
             <h2 className="text-xl font-semibold mb-2">AI Business Insights</h2>
-            {insight === undefined && <div className="flex justify-center p-4"><Spinner /></div>}
-            {insight && <p className="text-sm text-muted-foreground italic">"{insight.insight}"</p>}
-            {!insight && <p className="text-sm text-muted-foreground">No insights available yet. Check back soon.</p>}
+            {insight ? (
+                <div>
+                    <h3 className="font-semibold">{insight.title}</h3>
+                    <p className="text-sm text-muted-foreground italic mb-4">"{insight.description}"</p>
+                    {insight.type === 'pricing' && insight.actionDetails && (
+                        <Button
+                            size="sm"
+                            onClick={() => handleApplySuggestion(insight.actionDetails)}
+                            disabled={isApplying}
+                        >
+                            {isApplying ? <Spinner size="sm" /> : 'Apply Suggestion'}
+                        </Button>
+                    )}
+                </div>
+            ) : (
+                <p className="text-sm text-muted-foreground">No insights available yet. Check back soon.</p>
+            )}
         </Card>
     );
 };
@@ -105,22 +162,83 @@ const ReportGenerator: React.FC<{ clerkOrgId: string }> = ({ clerkOrgId }) => {
     );
 };
 
+const UpcomingAppointments: React.FC<{ clerkOrgId: string }> = ({ clerkOrgId }) => {
+    const appointments = useQuery(api.scheduling.getUpcomingAppointments, { clerkOrgId });
+    if(appointments === undefined) return null;
+    return (
+        <Card className="p-6">
+            <h2 className="text-xl font-semibold mb-4">Upcoming Appointments</h2>
+            {appointments && appointments.length > 0 ? (
+                <ul className="space-y-3">
+                    {appointments.map(appt => (
+                         <li key={appt._id} className="p-3 bg-secondary rounded-md border border-border">
+                            <p className="font-medium">{appt.clientName}</p>
+                            <p className="text-sm text-muted-foreground">{appt.vehicleDescription}</p>
+                            <p className="text-xs text-muted-foreground mt-1">{new Date(appt.appointmentTime).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' })}</p>
+                        </li>
+                    ))}
+                </ul>
+            ) : (
+                <p className="text-sm text-muted-foreground">No upcoming appointments.</p>
+            )}
+        </Card>
+    );
+}
+
+const RecentReviews: React.FC<{ clerkOrgId: string }> = ({ clerkOrgId }) => {
+    const reviews = useQuery(api.reviews.getReviewsForTenant, { clerkOrgId });
+    if(reviews === undefined) return null;
+    return (
+         <Card className="p-6">
+            <h2 className="text-xl font-semibold mb-4">Recent Client Reviews</h2>
+            {reviews && reviews.length > 0 ? (
+                <ul className="space-y-4">
+                    {reviews.map(review => (
+                        <li key={review._id} className="border-b border-border pb-3 last:border-b-0 last:pb-0">
+                            <div className="flex items-center gap-2 mb-1">
+                                <div className="flex text-yellow-400">
+                                    {[...Array(5)].map((_, i) => (
+                                        <svg key={i} xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill={i < review.rating ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+                                    ))}
+                                </div>
+                                <span className="text-sm font-semibold">{review.clientName}</span>
+                            </div>
+                            <p className="text-sm text-muted-foreground italic">"{review.comment}"</p>
+                        </li>
+                    ))}
+                </ul>
+            ) : (
+                <p className="text-sm text-muted-foreground">No reviews yet.</p>
+            )}
+        </Card>
+    );
+};
 
 const DetailerDashboard: React.FC = () => {
   const { organization } = useOrganization();
   const updateTheme = useMutation(api.tenants.updateTheme);
+  const myTenant = useQuery(api.tenants.getMyTenant);
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
-  if (!organization) return <div className="flex justify-center items-center h-64"><Spinner /></div>;
-  const clerkOrgId = organization.id;
+  const clerkOrgId = organization?.id;
+  const metrics = useQuery(api.analytics.getDashboardMetrics, clerkOrgId ? { clerkOrgId } : 'skip');
+  const isLoading = metrics === undefined || myTenant === undefined;
 
-  const assessmentUrl = `${window.location.origin}/assessment?tenantId=${clerkOrgId}`;
+  if (!organization || !clerkOrgId) {
+    return <div className="flex justify-center items-center h-64"><Spinner /></div>;
+  }
+  
+  const assessmentUrl = `${window.location.origin}/assessment/${clerkOrgId}`;
 
   useEffect(() => {
     if (canvasRef.current) {
         QRCode.toCanvas(canvasRef.current, assessmentUrl, { width: 160, margin: 2, color: { dark: '#e0e0e0', light: '#1a1a1a' }}, console.error);
     }
   }, [assessmentUrl]);
+
+  if (isLoading) {
+    return <DashboardSkeleton />;
+  }
 
   return (
     <div>
@@ -133,6 +251,7 @@ const DetailerDashboard: React.FC = () => {
         <div className="lg:col-span-2 space-y-8">
             <AIInsights clerkOrgId={clerkOrgId} />
             <RevenueForecast clerkOrgId={clerkOrgId} />
+            <RecentReviews clerkOrgId={clerkOrgId} />
         </div>
 
         <div className="space-y-8">
@@ -143,11 +262,12 @@ const DetailerDashboard: React.FC = () => {
                     <Button size="sm" className="w-full" onClick={() => navigator.clipboard.writeText(assessmentUrl)}>Copy Link</Button>
                 </div>
             </Card>
+            <UpcomingAppointments clerkOrgId={clerkOrgId} />
             <Card className="p-6">
                 <h2 className="text-xl font-semibold mb-4">Customize Brand Color</h2>
                 <div className="flex gap-3">
                     {THEME_COLORS.map(color => (
-                        <button key={color} onClick={() => updateTheme({ themeColor: color })} className="w-8 h-8 rounded-full border-2 border-border transition-transform hover:scale-110 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:ring-offset-background" style={{ backgroundColor: color }} aria-label={`Set theme to ${color}`}/>
+                        <button key={color} onClick={() => updateTheme({ themeColor: color })} className={`w-8 h-8 rounded-full border-2 border-border transition-transform hover:scale-110 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:ring-offset-background ${myTenant?.themeColor === color ? 'ring-2 ring-primary ring-offset-2 ring-offset-background' : ''}`} style={{ backgroundColor: color }} aria-label={`Set theme to ${color}`}/>
                     ))}
                 </div>
             </Card>

@@ -7,6 +7,17 @@ import Input from '../ui/Input';
 import Button from '../ui/Button';
 import Spinner from '../ui/Spinner';
 
+const TenantsSkeleton = () => (
+    <ul className="space-y-3">
+        {[...Array(3)].map((_, i) => (
+            <li key={i} className="p-3 h-12 bg-secondary rounded-md border border-border flex justify-between items-center animate-pulse">
+                <div className="h-5 bg-muted rounded w-1/3"></div>
+                <div className="h-4 bg-muted rounded w-1/4"></div>
+            </li>
+        ))}
+    </ul>
+);
+
 const AdminDashboard: React.FC = () => {
   const [newTenantName, setNewTenantName] = useState('');
   const createTenant = useAction(api.tenants.createTenant);
@@ -58,7 +69,7 @@ const AdminDashboard: React.FC = () => {
         <div className="md:col-span-2">
           <Card className="p-6">
             <h2 className="text-xl font-semibold mb-4">All Tenants</h2>
-            {allTenants === undefined && <div className="flex justify-center p-8"><Spinner/></div>}
+            {allTenants === undefined && <TenantsSkeleton />}
             {allTenants && allTenants.length === 0 && (
               <p className="text-muted-foreground">No tenants created yet.</p>
             )}

@@ -1,18 +1,20 @@
 
-
-import { action, internalMutation, query } from 'convex/server';
+// Fix: Import Convex function builders from './_generated/server'
+import { action, internalMutation, query } from './_generated/server';
 import { v } from 'convex/values';
 import { api, internal } from './_generated/api';
 import Stripe from 'stripe';
 
-// Fix: Update Stripe API version to match the expected version from the type definitions.
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, { apiVersion: '2025-08-27.basil' as any});
+const stripeSecretKey = process.env.STRIPE_SECRET_KEY;
+if (!stripeSecretKey) {
+  throw new Error("STRIPE_SECRET_KEY environment variable not set.");
+}
+const stripe = new Stripe(stripeSecretKey);
 
 /**
  * Creates a Stripe Checkout session for a given assessment.
  * This action is called by the client to initiate the payment process.
  */
-// Fix: Use the 'action' factory function instead of the 'Action' type.
 export const createStripeCheckoutSession = action({
     args: {
         assessmentId: v.id("assessments"),
@@ -26,8 +28,8 @@ export const createStripeCheckoutSession = action({
         const assessment = await ctx.runQuery(api.assessments.getAssessmentById, {id: args.assessmentId});
         if (!assessment) throw new Error("Assessment not found");
         
-        const successUrl = `${domain}/assessment?session_id={CHECKOUT_SESSION_ID}&assessmentId=${args.assessmentId}&tenantId=${assessment?.clerkOrgId}`;
-        const cancelUrl = `${domain}/assessment?tenantId=${assessment?.clerkOrgId}`;
+        const successUrl = `${domain}/assessment/${assessment?.clerkOrgId}?session_id={CHECKOUT_SESSION_ID}&assessmentId=${args.assessmentId}`;
+        const cancelUrl = `${domain}/assessment/${assessment?.clerkOrgId}`;
         
         try {
             const session = await stripe.checkout.sessions.create({
@@ -66,7 +68,6 @@ export const createStripeCheckoutSession = action({
  * Fulfills an order after Stripe confirms a successful payment via webhook.
  * This internal mutation creates the final appointment record and schedules follow-up actions.
  */
-// Fix: Use the 'internalMutation' factory function instead of the 'InternalMutation' type.
 export const fulfillStripeOrder = internalMutation({
     args: {
         assessmentId: v.id("assessments"),
@@ -132,7 +133,6 @@ export const fulfillStripeOrder = internalMutation({
  * Retrieves all upcoming appointments for a given tenant organization.
  * Used by the Detailer Dashboard to display their schedule.
  */
-// Fix: Use the 'query' factory function instead of the 'Query' type.
 export const getUpcomingAppointments = query({
     args: { clerkOrgId: v.string() },
     handler: async (ctx, args) => {
@@ -157,7 +157,6 @@ export const getUpcomingAppointments = query({
  * Public query to find an appointment by its original assessment ID.
  * Used on the confirmation page to create a review link.
  */
-// Fix: Use the 'query' factory function instead of the 'Query' type.
 export const getAppointmentByAssessmentId = query({
     args: { assessmentId: v.id("assessments") },
     handler: async (ctx, args) => {
@@ -172,7 +171,6 @@ export const getAppointmentByAssessmentId = query({
  * Retrieves all appointments for the currently logged-in client.
  * Used by the Client Dashboard to display their history.
  */
-// Fix: Use the 'query' factory function instead of the 'Query' type.
 export const getAppointmentsForClient = query({
     handler: async (ctx) => {
         const identity = await ctx.auth.getUserIdentity();
